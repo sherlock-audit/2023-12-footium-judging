@@ -1,0 +1,111 @@
+Sour Cobalt Tardigrade
+
+high
+
+# Owner-Dependent Pause/Activate Function cause Potential Compromise or Manipulation of Contract and Game
+
+## Summary
+The functions `activateContract` and `pauseContract` rely solely on the owner of the contract to pause or activate the contract. This creates a centralized control point that is susceptible to compromise or malicious actions. This can compromise the security and reliability of the contract and the game, and damage the reputation and trust of the contract and the game among the users and the community.
+## Vulnerability Detail
+The functions `activateContract` and `pauseContract` rely solely on the owner of the contract to pause or activate the contract. This creates a centralized control point that is susceptible to compromise or malicious actions. For example, if the owner’s account is hacked or coerced, the attacker can pause or activate the contract at will. Alternatively, if the owner is dishonest or malicious, they can pause or activate the contract to manipulate the game or harm the users. This violates the principle of decentralization, which is one of the main advantages of blockchain technology. Decentralization means that no single entity has control over the network or the data, and that decisions are made collectively by the participants. Decentralization enhances the security, reliability, and transparency of the system, and prevents censorship and corruption.
+## Impact
+ It can compromise the security and reliability of the contract and the game. It can also damage the reputation and trust of the contract and the game among the users and the community. If the owner’s account is hacked or coerced, the attacker can pause or activate the contract at will, disrupting the normal operation of the contract and the game, and causing loss of funds or reputation for the owner and the users. Alternatively, if the owner is dishonest or malicious, they can pause or activate the contract to manipulate the game or harm the users, violating the rules and expectations of the game, and causing frustration and dissatisfaction among the users and the community. This can reduce the user engagement and retention, and affect the profitability and sustainability of the contract and the game.
+## Code Snippet
+https://github.com/sherlock-audit/2023-12-footium/blob/main/footium-eth-shareable/contracts/FootiumAcademy.sol#L77-L87
+## Tool used
+- Manual Review
+## Test case and logs
+```solidity
+// Bob hacks Alice's account or convinces Alice to pause or activate the contract to his advantage
+footium.pauseContract();
+
+// Bob successfully pauses the contract at will
+assert(footium.paused() == true);
+```
+## Recommendation
+A possible recommendation to fix this vulnerability is to use a decentralized mechanism to pause or activate the contract, such as community voting or multi-signature approvals. This can reduce the reliance on the owner and increase the transparency and trust of the contract and the game.
+```solidity
+// Import the OpenZeppelin library
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+// Use the AccessControl contract
+contract FootiumAcademy is AccessControl {
+    // Define a constant for the minimum quorum of votes
+    uint256 constant MIN_QUORUM = 100;
+
+    // Define a role for the voters
+    bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
+
+    // Define a state variable to store the proposed pause state
+    bool public proposedPauseState;
+
+    // Define a state variable to store the number of votes for the proposal
+    uint256 public votesForProposal;
+
+    // Define a state variable to store the voters who have voted for the proposal
+    mapping(address => bool) public votedForProposal;
+
+    // Define an event for the proposal
+    event ProposedPauseState(bool pauseState);
+
+    // Define an event for the vote
+    event VotedForProposal(address voter, bool vote);
+
+    // Define an event for the execution
+    event ExecutedPauseState(bool pauseState);
+
+    // Define a modifier to check if the caller is a voter
+    modifier onlyVoter() {
+        require(hasRole(VOTER_ROLE, msg.sender), "Not a voter");
+        _;
+    }
+
+    // Define a function to propose a new pause state
+    function proposePauseState(bool pauseState) public onlyVoter {
+        // Reset the proposal state
+        proposedPauseState = pauseState;
+        votesForProposal = 0;
+        votedForProposal = {};
+
+        // Emit the event
+        emit ProposedPauseState(pauseState);
+    }
+
+    // Define a function to vote for the proposal
+    function voteForProposal(bool vote) public onlyVoter {
+        // Check if the voter has already voted
+        require(!votedForProposal[msg.sender], "Already voted");
+
+        // Check if the vote is in favor of the proposal
+        if (vote) {
+            // Increment the number of votes for the proposal
+            votesForProposal++;
+        }
+
+        // Mark the voter as having voted
+        votedForProposal[msg.sender] = true;
+
+        // Emit the event
+        emit VotedForProposal(msg.sender, vote);
+    }
+
+    // Define a function to execute the proposal
+    function executePauseState() public onlyVoter {
+        // Check if the proposal has reached the minimum quorum
+        require(votesForProposal >= MIN_QUORUM, "Not enough votes");
+
+        // Check if the proposal is to pause the contract
+        if (proposedPauseState) {
+            // Pause the contract
+            _pause();
+        } else {
+            // Unpause the contract
+            _unpause();
+        }
+
+        // Emit the event
+        emit ExecutedPauseState(proposedPauseState);
+    }
+}
+
+```
